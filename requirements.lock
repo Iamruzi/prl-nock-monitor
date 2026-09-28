@@ -1,0 +1,4 @@
+# Runtime: CPython 3.12.x (GitHub Actions setup-python).
+# Collector and preflight use only the Python standard library; no pip packages.
+# Frontend: native HTML/CSS/JavaScript; no CDN scripts, npm or build dependencies.
+# GitHub Actions are pinned to immutable commits in .github/workflows/publish.yml.

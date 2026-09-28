@@ -1,0 +1,10 @@
+{
+  "prl_address": "prl1pj4h3kcamt8mf2hcfrdg88v7hjdjdnx7en2zyz9ksdz3ezjf0l76q280h7u",
+  "nock_address": "6wQKbTnNUirQYvaUkFyRm1YsjcZDg3mXUbQ1fT3xsNvLQNLYJedFb87",
+  "site_url": "https://iamruzi.github.io/prl-nock-monitor/",
+  "prl_min_payout": 1,
+  "nock_min_payout": 350,
+  "nock_payout_interval_hours": 6,
+  "payout_rules_verified_at": "2026-09-28",
+  "stale_after_seconds": 900
+}
