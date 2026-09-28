@@ -10,6 +10,8 @@
 - 矿池累计付款、待付款余额和待成熟收益：分别读取 Pearlhash PRL 与 NOCK 账本。矿池付款不作为链上到账证明。
 - 最近到账记录：最近 50 笔地址交易内的已确认转入。PRL 排除发送方为自己的找零交易；本页最多展示 8 笔。
 - 挖矿状态：依据矿池连接与显卡算力，不直接检测 systemd、GPU 温度或服务器。
+- 价格：CoinGecko 的 `pearl-2` / `nockchain`，美元、人民币与 24 小时涨跌幅。页面打开时每 60 秒尝试直连刷新，云端快照也保留行情；失败会标记并使用缓存，报价时间取行情源的 last_updated_at。
+- 钱包总价值：当前钱包余额乘报价，分别汇总 USD 与 CNY。累计历史到账、矿池待付款与待成熟不计入；未知币种余额或报价不能当成零，显示已知部分及「部分估值」。这不是按历史成交价统计的已实现收入。
 - 公共快照只保留金额、地址、交易、矿工名、版本、GPU 型号和算力；不保留 IP、worker ID 或原始 API 数据。
 - Nockscan 明确返回 Address not found 时显示「暂无地址记录」和未知余额，不伪装成已核实的零余额。
 
@@ -43,4 +45,5 @@ python -m http.server 19101 --bind 127.0.0.1 --directory site
 - Pearlhash：<https://pearlhash.xyz/>，`/api/account/{PRL}`、`/api/nock-balance/{PRL}`。
 - prlscan：<https://www.prlscan.com/>，其网页使用的 `https://api.prlscan.com/v1/addresses/{PRL}` 和 `/txs`。
 - nockscan API 文档：<https://nockscan.com/api>，金额单位为 nicks，65,536 nicks = 1 NOCK。
+- CoinGecko 行情接口：<https://docs.coingecko.com/reference/simple-price>。匿名公开 API 可能限流；前端仅请求价格，不向行情服务发送钱包地址。
 - GitHub Pages 免费公共仓库与限制：<https://docs.github.com/en/pages/getting-started-with-github-pages/github-pages-limits>。

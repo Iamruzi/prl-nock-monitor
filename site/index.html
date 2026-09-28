@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#f4f6ef">
   <meta name="robots" content="noindex,nofollow">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https://api.coingecko.com; img-src 'self' data:; object-src 'none'; base-uri 'none'">
   <meta name="description" content="PRL 与 NOCK 的个人钱包到账及挖矿状态。">
   <title>我的挖矿账本 · PRL / NOCK</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
@@ -24,6 +24,10 @@
     <div class="refresh-area"><button id="refresh" class="button" type="button"><span aria-hidden="true">↻</span> 刷新数据</button><p id="updated">正在读取最新快照…</p></div>
   </header>
   <div id="notice" class="notice" role="status" hidden></div>
+  <section id="wallet-value" class="wallet-value" aria-label="已到账钱包价值">
+    <div class="value-overview"><div class="value-heading"><h2>已到账钱包价值</h2><span id="value-state" class="tag">正在估算</span></div><div id="total-usd" class="total-usd">—</div><p id="total-cny" class="total-cny">等待余额和行情</p></div>
+    <div class="value-context"><p id="value-note">按钱包当前余额计算，矿池尚未付款的收益不计入。</p><p id="price-status">正在获取最新行情…</p><a href="https://www.coingecko.com/" target="_blank" rel="noopener noreferrer">行情来源 / CoinGecko ↗</a></div>
+  </section>
   <section class="mining-strip" aria-label="挖矿状态">
     <div class="mining-state"><span class="status-dot" id="status-dot"></span><div><span class="small-label">矿池报告状态</span><strong id="mining-status">正在查询</strong></div></div>
     <div><span class="small-label">矿工总算力</span><strong id="hashrate">—</strong></div>
@@ -41,7 +45,7 @@
     <div id="workers-content"><p class="empty">正在查询矿工…</p></div>
   </section>
   <section class="section details-section">
-    <details><summary>收款地址与数据说明 <span aria-hidden="true">＋</span></summary><div id="addresses"></div><div class="explanation"><p>“钱包余额”是当前地址剩余资产；“累计转入”是历史到账金额，转出后不会减少。PRL 累计转入已剔除找零。NOCK 累计转入采用区块浏览器口径。</p><p>“矿池待付款”还没有进入钱包，“待成熟”还在等待区块确认。矿池付款记录仅代表矿池记账，实际到账以区块浏览器记录为准。</p><p>定时任务约每 5 分钟尝试更新，平台调度可能延迟。页面每 60 秒检查最新快照；超过 15 分钟或接口失败会明确提示。矿工状态依据矿池连接记录，并非直接检测服务器。</p><p id="rules-note"></p></div><div id="source-health" class="source-health"></div></details>
+    <details><summary>收款地址与数据说明 <span aria-hidden="true">＋</span></summary><div id="addresses"></div><div class="explanation"><p>“钱包余额”是当前地址剩余资产；“累计转入”是历史到账金额，转出后不会减少。PRL 累计转入已剔除找零。NOCK 累计转入采用区块浏览器口径。</p><p>“矿池待付款”还没有进入钱包，“待成熟”还在等待区块确认。矿池付款记录仅代表矿池记账，实际到账以区块浏览器记录为准。</p><p>钱包价值 = 已知钱包当前余额 × 对应币种最新报价，提供美元及人民币估值。未知余额或缺失报价不当作零，合计将标为部分估值。估值不是实际成交收入，未扣手续费。</p><p>行情在页面打开时每 60 秒尝试从 CoinGecko 更新；报价自身可能延迟，以显示的报价时间为准。行情请求失败时保留有时间标记的缓存报价。PRL 对应 pearl-2，NOCK 对应 nockchain。</p><p>钱包与矿工定时任务约每 5 分钟尝试更新，平台调度可能延迟。页面每 60 秒检查最新快照；超过 15 分钟或接口失败会明确提示。矿工状态依据矿池连接记录，并非直接检测服务器。</p><p id="rules-note"></p></div><div id="source-health" class="source-health"></div></details>
   </section>
   <footer><span>PRL + NOCK · 个人监控页</span><span>只读查询 · 不需要钱包私钥</span></footer>
 </main>

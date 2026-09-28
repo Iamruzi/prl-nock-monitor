@@ -76,6 +76,30 @@ class AccountingTests(unittest.TestCase):
         for value in ("nan", "Infinity", None, True):
             with self.assertRaises(ValueError):collect.amount(value)
 
+    def test_price_ids_currency_and_timestamp(self):
+        row={"usd":1.39,"cny":9.3,"usd_24h_change":-4.8,"last_updated_at":1700000000}
+        result=collect.parse_prices({"pearl-2":row,"nockchain":dict(row,usd=0.024,cny=0.16),
+                                     "pearl":{"usd":100000}})
+        self.assertEqual(result["quotes"]["PRL"]["usd"],1.39)
+        self.assertEqual(result["quotes"]["NOCK"]["cny"],0.16)
+        self.assertEqual(result["quotes"]["PRL"]["change_24h"],-4.8)
+        self.assertEqual(result["quotes"]["PRL"]["updated_at"],"2023-11-14T22:13:20Z")
+
+    def test_missing_quote_is_unknown_not_zero(self):
+        result=collect.parse_prices({"pearl-2":{"usd":2,"cny":14,"last_updated_at":1700000000,"usd_24h_change":None}})
+        self.assertIsNone(result["quotes"]["NOCK"])
+        self.assertIsNone(result["quotes"]["PRL"]["change_24h"])
+        for value in (-1,0,None,"nan"):
+            with self.assertRaises(ValueError):
+                collect.parse_prices({"pearl-2":{"usd":value,"cny":14,"last_updated_at":1700000000}})
+
+    def test_price_freshness_uses_quote_timestamp_not_request_time(self):
+        body={"pearl-2":{"usd":2,"cny":14,"last_updated_at":1700000000}}
+        with patch.object(collect,"request_json",return_value=body):
+            result=collect.collect_source("prices","https://example.invalid",collect.parse_prices)
+        self.assertEqual(result["state"],"stale")
+        self.assertEqual(result["updated_at"],"2023-11-14T22:13:20Z")
+
 
 if __name__ == "__main__":
     unittest.main()

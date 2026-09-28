@@ -13,6 +13,8 @@ import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
 USER_AGENT = "Mozilla/5.0 (compatible; PersonalMiningMonitor/1.0)"
+PRICE_URL = ("https://api.coingecko.com/api/v3/simple/price?ids=pearl-2,nockchain"
+             "&vs_currencies=usd,cny&include_24hr_change=true&include_last_updated_at=true")
 
 
 def utcnow():
@@ -167,6 +169,25 @@ def parse_nock_chain(data):
             "address_not_found": False}
 
 
+def parse_prices(data):
+    quotes = {}
+    for coin, coin_id in (("PRL", "pearl-2"), ("NOCK", "nockchain")):
+        row = data.get(coin_id)
+        if not row:
+            quotes[coin] = None
+            continue
+        usd, cny = amount(row["usd"]), amount(row["cny"])
+        updated = amount(row["last_updated_at"])
+        if usd <= 0 or cny <= 0 or updated <= 0 or updated > time.time() + 300:
+            raise ValueError("Invalid price or quote timestamp")
+        quotes[coin] = {"usd": usd, "cny": cny,
+                        "change_24h": amount(row["usd_24h_change"]) if row.get("usd_24h_change") is not None else None,
+                        "updated_at": stamp(updated * 1000)}
+    if not any(quotes.values()):
+        raise ValueError("No supported coin prices returned")
+    return {"provider": "CoinGecko", "quotes": quotes}
+
+
 def source_specs(config):
     prl, nock = config["prl_address"], config["nock_address"]
     return {
@@ -175,6 +196,7 @@ def source_specs(config):
         "prl_chain": (f"https://api.prlscan.com/v1/addresses/{prl}", parse_prl_chain),
         "prl_txs": (f"https://api.prlscan.com/v1/addresses/{prl}/txs?limit=50", parse_prl_txs),
         "nock_chain": (f"https://nockscan.com/api/v1/address/{nock}?limit=50", parse_nock_chain),
+        "prices": (PRICE_URL, parse_prices),
     }
 
 
@@ -182,6 +204,11 @@ def collect_source(key, url, parser, previous=None):
     checked = utcnow()
     try:
         data = parser(request_json(url, allow_empty_address=(key == "nock_chain")))
+        if key == "prices":
+            updated = min(q["updated_at"] for q in data["quotes"].values() if q)
+            stale = time.time() - datetime.fromisoformat(updated.replace("Z", "+00:00")).timestamp() > 900
+            return {"state": "stale" if stale else "ok", "data": data, "updated_at": updated,
+                    "checked_at": checked, "error": "Quote is over 15 minutes old" if stale else None}
         return {"state": "empty" if data.get("address_not_found") else "ok", "data": data,
                 "updated_at": checked, "checked_at": checked, "error": None}
     except Exception as exc:
@@ -196,7 +223,7 @@ def build_snapshot(config, previous=None):
     previous = previous or {}
     # Never reuse a previous wallet's balances after configuration changes.
     old_sources = previous.get("sources", {}) if previous.get("config") == config else {}
-    with ThreadPoolExecutor(max_workers=5) as executor:
+    with ThreadPoolExecutor(max_workers=6) as executor:
         tasks = {k: executor.submit(collect_source, k, url, parser, old_sources.get(k))
                  for k, (url, parser) in source_specs(config).items()}
         sources = {k: task.result() for k, task in tasks.items()}
