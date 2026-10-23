@@ -31,6 +31,9 @@ def main():
             page.goto(base, wait_until="networkidle")
             expect(page.locator(".coin-panel")).to_have_count(2)
             expect(page.locator("#mining-status")).not_to_have_text("正在查询")
+            expect(page.locator("#jtm-content")).to_contain_text("jtm-computer")
+            expect(page.locator("#jtm-content")).to_contain_text("未计入上方钱包价值")
+            expect(page.locator("#jtm-state")).not_to_have_text("状态未知")
             expect(page.locator("tbody tr")).not_to_have_count(0)
             page.screenshot(path=str(artifacts / "desktop.png"), full_page=True)
             page.get_by_role("button", name="NOCK", exact=True).click()
@@ -40,12 +43,14 @@ def main():
             assert page.evaluate("document.documentElement.scrollWidth <= innerWidth"), "Mobile overflow"
             page.locator("summary").click()
             expect(page.locator("#addresses")).to_contain_text(snapshot["config"]["nock_address"])
+            expect(page.locator("#addresses")).to_contain_text(snapshot["config"]["jtm_address"])
             old = json.loads(json.dumps(snapshot))
             for source in old["sources"].values():
                 source["updated_at"] = "2026-01-01T00:00:00Z"
             page.route("**/data/status.json?*", lambda route: route.fulfill(json=old))
             page.get_by_role("button", name="刷新数据").click()
             expect(page.locator("#mining-status")).to_contain_text("数据较旧")
+            expect(page.locator("#jtm-state")).to_contain_text("数据较旧")
             expect(page.locator("#notice")).to_be_visible()
             expect(page.locator(".coin-panel .tag").first).to_have_text("上次成功数据")
             page.unroute("**/data/status.json?*")
@@ -57,6 +62,7 @@ def main():
             fresh.goto(base, wait_until="networkidle")
             expect(fresh.locator("#mining-status")).to_have_text("状态未知")
             expect(fresh.locator("#updated")).to_have_text("读取失败")
+            expect(fresh.locator("#jtm-content")).to_contain_text("暂时无法加载")
             assert not errors, errors
             print("PASS: desktop/mobile, real balances, transactions, tabs, addresses, no overflow, stale/error/initial-failure states")
             browser.close()

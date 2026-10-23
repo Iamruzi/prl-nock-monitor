@@ -143,15 +143,26 @@ function renderHistory() {
     return `<tr><td>${timeText(r.time,true)}</td><td class="amount">+${fmt(r.amount)}<small>${selectedCoin}</small></td><td>${escapeHTML(r.label)}</td><td><a class="tx-link" href="${escapeHTML(safe)}" target="_blank" rel="noopener noreferrer" aria-label="查看 ${escapeHTML(r.txid)} 链上记录">${escapeHTML(r.txid.slice(0,7))}… ↗</a></td></tr>`;
   }).join("")}</tbody></table></div>`;
 }
+function renderJtm() {
+  const m=source("jtm_mining"), b=source("jtm_balance"), data=m.data, balance=b.data;
+  const stale=outdated("jtm_mining"), ledgerStale=outdated("jtm_balance");
+  const state=!data?"状态未知":stale?"数据较旧 · 待确认":!data.online_workers?"矿工离线":data.hashrate>0?"正在挖矿":"已连接 · 等待份额";
+  const rate=value=>validNumber(value)?fmt(value/1000,2)+" kH/s":"—";
+  const statusClass=!data||stale?"warn":!data.online_workers?"bad":"";
+  const row=(label,value)=>`<div class="stat-line"><span>${label}</span><strong>${fmt(value,6)} <small>JTM</small></strong></div>`;
+  const workers=(data?.workers||[]).map(w=>`<div class="worker-row"><div class="worker-name">${escapeHTML(w.name)}<small>${escapeHTML(w.version)}</small></div><div class="gpu">${escapeHTML(w.cpu)}<small>矿池估算 · ${timeText(m.updated_at,true)}</small></div><span class="online">${stale?"上次记录":w.online?"● 已连接":"离线"}</span><div class="speed">${rate(w.hashrate)}</div></div>`).join("");
+  const c=snapshot?.config;
+  $("jtm-content").innerHTML=`<div class="cpu-summary"><div class="cpu-runtime"><div class="cpu-state"><strong>${escapeHTML(c?.jtm_worker||"jtm-computer")}</strong><span class="tag ${statusClass}" id="jtm-state">${state}</span></div><div class="cpu-rate" id="jtm-rate">${rate(data?.hashrate)}</div><p class="section-note">近 2 分钟有效份额估算 · 10 分钟均值 ${rate(data?.hashrate_10m)}</p><div class="stat-line"><span>在线 CPU 矿工</span><strong>${data?data.online_workers:"—"} 台</strong></div><div class="stat-line"><span>近 10 分钟有效 / 拒绝份额</span><strong>${fmt(data?.accepted,0)} / ${fmt(data?.rejected,0)}</strong></div><p class="section-note">最后份额 ${timeText(data?.last_share_at,true)} · 更新 ${timeText(m.updated_at,true)}</p></div><div class="cpu-ledger"><div class="pool-title">JTM 矿池账本 <span class="tag ${!balance||ledgerStale?"warn":""}">${!balance?"查询暂不可用":ledgerStale?"上次成功数据":"矿池已查询"}</span></div>${row("待付款",balance?.balance)}${row("待成熟",balance?.pending)}${row("付款处理中 · 已预留",balance?.reserved)}${row("矿池报告累计已付",balance?.paid_total)}<p class="payout-note">${fmt(c?.jtm_min_payout,1)} JTM 起付 · ${c?.jtm_pool_fee_percent??"—"}% 矿池费 · ${c?.jtm_confirmations??"—"} 个确认<br>账本更新 ${timeText(b.updated_at,true)}</p></div></div>${workers||'<p class="empty">暂无可核实的 CPU 矿工连接记录。</p>'}<p class="section-note cpu-note">算力随份额窗口和换块等待波动。拒绝数未提供时显示“—”。矿池累计已付尚未在此独立核实链上到账；JTM 链上余额及行情未接入，未计入上方钱包价值。规则核实于 ${escapeHTML(c?.jtm_rules_verified_at||"—")}。</p>`;
+}
 function renderDetails() {
   const c=snapshot.config;
-  $("addresses").innerHTML=["PRL","NOCK"].map(coin=>`<div class="address-row"><b>${coin}</b><code>${escapeHTML(c[coin.toLowerCase()+"_address"])}</code><button class="copy" type="button" data-copy="${coin}" aria-label="复制 ${coin} 收款地址">复制地址</button></div>`).join("");
+  $("addresses").innerHTML=["PRL","NOCK",...(c.jtm_address?["JTM"]:[])].map(coin=>`<div class="address-row"><b>${coin}</b><code>${escapeHTML(c[coin.toLowerCase()+"_address"])}</code><button class="copy" type="button" data-copy="${coin}" aria-label="复制 ${coin} 收款地址">复制地址</button></div>`).join("");
   document.querySelectorAll("[data-copy]").forEach(button=>button.addEventListener("click",async()=>{
     const address=c[button.dataset.copy.toLowerCase()+"_address"];
     try {await navigator.clipboard.writeText(address);showToast(`${button.dataset.copy} 地址已复制`);} catch {showToast("复制未成功，请长按或选中上面的完整地址复制。");}
   }));
   $("rules-note").textContent=`付款规则核实于 ${c.payout_rules_verified_at}，后续以矿池规则为准。此页面不会执行转账或修改收款地址。`;
-  const names={prl_pool:"PRL 矿池",nock_pool:"NOCK 矿池",prl_chain:"PRL 钱包",prl_txs:"PRL 到账",nock_chain:"NOCK 钱包"};
+  const names={prl_pool:"PRL 矿池",nock_pool:"NOCK 矿池",prl_chain:"PRL 钱包",prl_txs:"PRL 到账",nock_chain:"NOCK 钱包",jtm_mining:"JTM CPU",jtm_balance:"JTM 矿池账本"};
   $("source-health").innerHTML=Object.entries(names).map(([k,name])=>`<span class="${outdated(k)?"warn":""}">${name} · ${source(k).state==="empty"?"暂无地址记录":outdated(k)?"待更新":"正常"} · ${timeText(source(k).updated_at,true)}</span>`).join("");
 }
 function renderFreshness() {
@@ -166,7 +177,7 @@ function renderFreshness() {
 function render() {
   renderFreshness(); renderMining(); renderValuation();
   $("balances").innerHTML=renderCoin("PRL")+renderCoin("NOCK");
-  renderHistory(); renderDetails();
+  renderHistory(); renderDetails(); renderJtm();
 }
 async function refresh(manual=false) {
   if (fetching) return;
@@ -183,7 +194,7 @@ async function refresh(manual=false) {
   } catch {
     networkError=true;
     if (snapshot) render();
-    else {$("notice").hidden=false;$("notice").textContent="暂时无法加载数据，请稍后点刷新重试。";$("updated").textContent="读取失败";$("mining-status").textContent="状态未知";$("binding").textContent="未能核实";$("history-content").innerHTML='<p class="empty">到账记录暂时无法加载。</p>';$("workers-content").innerHTML='<p class="empty">矿工状态暂时无法加载。</p>';}
+    else {$("notice").hidden=false;$("notice").textContent="暂时无法加载数据，请稍后点刷新重试。";$("updated").textContent="读取失败";$("mining-status").textContent="状态未知";$("binding").textContent="未能核实";$("history-content").innerHTML='<p class="empty">到账记录暂时无法加载。</p>';$("workers-content").innerHTML='<p class="empty">矿工状态暂时无法加载。</p>';$("jtm-content").innerHTML='<p class="empty">JTM 状态暂时无法加载。</p>';}
     if (manual) showToast("读取失败，请稍后重试。");
   } finally {clearTimeout(timer);fetching=false;$("refresh").disabled=false;}
 }
@@ -193,5 +204,5 @@ document.querySelectorAll("[data-coin]").forEach(button=>button.addEventListener
   document.querySelectorAll("[data-coin]").forEach(b=>{b.classList.toggle("active",b===button);b.setAttribute("aria-pressed",String(b===button));});renderHistory();
 }));
 refresh();refreshPrices();setInterval(()=>{if (!document.hidden) {refresh();refreshPrices();}},60000);
-setInterval(()=>{if (snapshot && !document.hidden) {renderFreshness();renderMining();renderValuation();}},15000);
+setInterval(()=>{if (snapshot && !document.hidden) {renderFreshness();renderMining();renderValuation();renderJtm();}},15000);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden){refresh();refreshPrices();}});

@@ -1,8 +1,16 @@
-# PRL / NOCK 个人监控页
+# PRL / NOCK / JTM 个人监控页
 
 免费、只读的个人挖矿账本。GitHub Pages 托管静态网页，GitHub Actions 标准公共 runner 定时查询公开接口；不需要 SSH 凭据、矿机公网端口、钱包私钥或付费 API。
 
 在线地址：<https://iamruzi.github.io/prl-nock-monitor/>
+
+## JTM CPU 接入（2026-10-23）
+
+`jtm-computer` 通过 Gozero JTM 矿池运行 TowerWalk CPU 挖矿。快照新增 `jtm_mining` 和 `jtm_balance`：分别采集公开的 `/portal-api/jtm/mining?address=…` 和 `/portal-api/jtm/wallet?address=…`，只保留公开收款地址、矿工名、CPU 型号、算力、份额与账本金额，不发布会话 ID、IP 或认证信息。
+
+当前算力按 2 分钟有效份额窗口估算，同时显示 10 分钟均值；拒绝数未提供时保持未知。余额以 1,000,000 micro-JTM = 1 JTM 转换，待付款、待成熟、付款预留及累计已付分别展示。上游缓存和请求失败沿用原时间并标注过期，不显示为实时在线。
+
+JTM 矿池累计已付不等同独立核实的链上到账；尚未接入 JTM 链上余额和行情，因此 JTM 不计入页面顶部的钱包估值。JTM 规则核实于 2026-10-23：1% 池费、0.1 JTM 起付、9 个确认，矿池每 60 秒尝试付款，费用储备不足时可能延后。来源：<https://pool.gozero.trade/JTM>。
 
 ## 内容与口径
 

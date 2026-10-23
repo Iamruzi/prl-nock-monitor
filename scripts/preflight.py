@@ -11,7 +11,7 @@ if sys.version_info < (3, 10):
     raise SystemExit("Python 3.10+ required; production uses Python 3.12")
 ssl.create_default_context()
 config = load_config()
-assert len(source_specs(config)) == 6
+assert len(source_specs(config)) == (8 if config.get("jtm_address") else 6)
 assert config["prl_min_payout"] > 0 and config["nock_min_payout"] > 0
 assert config["stale_after_seconds"] >= 300
 for filename in ("index.html", "styles.css", "app.js"):

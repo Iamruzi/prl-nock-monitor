@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#f4f6ef">
   <meta name="robots" content="noindex,nofollow">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https://api.coingecko.com; img-src 'self' data:; object-src 'none'; base-uri 'none'">
-  <meta name="description" content="PRL 与 NOCK 的个人钱包到账及挖矿状态。">
-  <title>我的挖矿账本 · PRL / NOCK</title>
+  <meta name="description" content="PRL、NOCK 钱包到账与 JTM CPU 挖矿状态。">
+  <title>我的挖矿账本 · PRL / NOCK / JTM</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="styles.css">
   <script src="app.js" defer></script>
@@ -17,10 +17,10 @@
 <main>
   <nav class="masthead" aria-label="页面导航">
     <a class="wordmark" href="./"><span class="mark" aria-hidden="true">m.</span>个人挖矿账本</a>
-    <span class="pair">PRL <span aria-hidden="true">/</span> NOCK</span>
+    <span class="pair">PRL <span aria-hidden="true">/</span> NOCK <span aria-hidden="true">/</span> JTM</span>
   </nav>
   <header class="page-header">
-    <div><p class="eyebrow">钱包 · 收益 · 矿工</p><h1>到账和挖矿，一眼看清。</h1><p class="intro">两种币，一个页面。钱包到账与矿池收益分别记录。</p></div>
+    <div><p class="eyebrow">钱包 · 收益 · 矿工</p><h1>到账和挖矿，一眼看清。</h1><p class="intro">GPU 与 CPU，一起查看。钱包到账与矿池收益分别记录。</p></div>
     <div class="refresh-area"><button id="refresh" class="button" type="button"><span aria-hidden="true">↻</span> 刷新数据</button><p id="updated">正在读取最新快照…</p></div>
   </header>
   <div id="notice" class="notice" role="status" hidden></div>
@@ -30,11 +30,15 @@
   </section>
   <section class="mining-strip" aria-label="挖矿状态">
     <div class="mining-state"><span class="status-dot" id="status-dot"></span><div><span class="small-label">矿池报告状态</span><strong id="mining-status">正在查询</strong></div></div>
-    <div><span class="small-label">矿工总算力</span><strong id="hashrate">—</strong></div>
-    <div><span class="small-label">在线矿工</span><strong id="worker-count">—</strong></div>
+    <div><span class="small-label">PRL / NOCK GPU 算力</span><strong id="hashrate">—</strong></div>
+    <div><span class="small-label">在线 GPU 矿工</span><strong id="worker-count">—</strong></div>
     <div class="binding"><span class="small-label">NOCK 收款地址</span><strong id="binding">正在核对</strong></div>
   </section>
   <section id="balances" class="balances" aria-label="钱包和矿池余额"></section>
+  <section class="section cpu-section" aria-labelledby="cpu-heading">
+    <div class="section-heading"><div><p class="eyebrow">闲置 CPU · TowerWalk</p><h2 id="cpu-heading">JTM 挖矿</h2></div><a class="source-label" href="https://pool.gozero.trade/JTM" target="_blank" rel="noopener noreferrer">来源 / Gozero ↗</a></div>
+    <div id="jtm-content" aria-live="polite"><p class="empty">正在查询 CPU 矿工与 JTM 矿池账本…</p></div>
+  </section>
   <section class="history section">
     <div class="section-heading"><div><p class="eyebrow">入账记录</p><h2>最近的钱包到账</h2></div><div class="tabs" role="group" aria-label="选择币种"><button class="tab active" data-coin="PRL" aria-pressed="true">PRL</button><button class="tab" data-coin="NOCK" aria-pressed="false">NOCK</button></div></div>
     <p class="section-note" id="history-note">链上已确认的转入，未付款的矿池收益不计入这里。</p>
@@ -47,7 +51,7 @@
   <section class="section details-section">
     <details><summary>收款地址与数据说明 <span aria-hidden="true">＋</span></summary><div id="addresses"></div><div class="explanation"><p>“钱包余额”是当前地址剩余资产；“累计转入”是历史到账金额，转出后不会减少。PRL 累计转入已剔除找零。NOCK 累计转入采用区块浏览器口径。</p><p>“矿池待付款”还没有进入钱包，“待成熟”还在等待区块确认。矿池付款记录仅代表矿池记账，实际到账以区块浏览器记录为准。</p><p>钱包价值 = 已知钱包当前余额 × 对应币种最新报价，提供美元及人民币估值。未知余额或缺失报价不当作零，合计将标为部分估值。估值不是实际成交收入，未扣手续费。</p><p>行情在页面打开时每 60 秒尝试从 CoinGecko 更新；报价自身可能延迟，以显示的报价时间为准。行情请求失败时保留有时间标记的缓存报价。PRL 对应 pearl-2，NOCK 对应 nockchain。</p><p>钱包与矿工定时任务约每 5 分钟尝试更新，平台调度可能延迟。页面每 60 秒检查最新快照；超过 15 分钟或接口失败会明确提示。矿工状态依据矿池连接记录，并非直接检测服务器。</p><p id="rules-note"></p></div><div id="source-health" class="source-health"></div></details>
   </section>
-  <footer><span>PRL + NOCK · 个人监控页</span><span>只读查询 · 不需要钱包私钥</span></footer>
+  <footer><span>PRL + NOCK + JTM · 个人监控页</span><span>只读查询 · 不需要钱包私钥</span></footer>
 </main>
 <div id="toast" class="toast" role="status" hidden></div>
 </body>

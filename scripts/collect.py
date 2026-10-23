@@ -47,6 +47,8 @@ def load_config():
         raise ValueError("Invalid PRL address")
     if not re.fullmatch(r"[1-9A-HJ-NP-Za-km-z]{30,100}", config["nock_address"]):
         raise ValueError("Invalid NOCK address")
+    if config.get("jtm_address") and not re.fullmatch(r"j1[02-9ac-hj-np-z]{58}", config["jtm_address"]):
+        raise ValueError("Invalid JTM address")
     return config
 
 
@@ -188,9 +190,70 @@ def parse_prices(data):
     return {"provider": "CoinGecko", "quotes": quotes}
 
 
+def nonnegative(value):
+    number = amount(value)
+    if number < 0:
+        raise ValueError("Negative pool value")
+    return number
+
+
+def upstream_time(data):
+    updated = amount(data["updatedAt"])
+    if updated <= 0 or updated > (time.time() + 300) * 1000:
+        raise ValueError("Invalid upstream timestamp")
+    return stamp(updated)
+
+
+def parse_jtm_mining(data):
+    if data.get("adapter") != "jetsam" or data.get("available") is not True or data.get("stale") is not False or data.get("error"):
+        raise ValueError("JTM mining unavailable")
+    if not isinstance(data["workers"], list):
+        raise ValueError("Invalid JTM workers")
+    nonnegative(data["hashrate"])
+    workers = []
+    for worker in data["workers"]:
+        if not isinstance(worker.get("online"), bool):
+            raise ValueError("Invalid worker state")
+        workers.append({"name": str(worker.get("name") or worker.get("workerName") or "未命名")[:80],
+                        "online": worker["online"], "status": str(worker.get("status", "unknown"))[:20],
+                        "cpu": str(worker.get("deviceModel") or "型号未上报")[:160],
+                        "version": str(worker.get("platform") or "未知")[:100],
+                        "hashrate": nonnegative(worker["displayHashrate"]) if worker.get("displayHashrate") is not None else None})
+    return {"hashrate": nonnegative(data["displayHashrate"]) if data.get("displayHashrate") is not None else None,
+            "hashrate_10m": nonnegative(data["averages"]["m10"]) if data["averages"].get("m10") is not None else None,
+            "online_workers": int(nonnegative(data["onlineWorkers"])), "accepted": int(nonnegative(data["accepted"])),
+            "rejected": int(nonnegative(data["rejected"])) if data.get("rejected") is not None else None,
+            "last_share_at": stamp(data["lastShare"]) if data.get("lastShare") else None,
+            "workers": workers, "_updated_at": upstream_time(data)}
+
+
+def parse_jtm_balance(data):
+    if data.get("adapter") != "jetsam" or data.get("symbol") != "JTM" or data.get("error"):
+        raise ValueError("Invalid JTM ledger")
+    balance = data["balance"]
+    if not isinstance(balance, dict) or not {"available", "immature", "reserved", "paid"}.issubset(balance):
+        raise ValueError("Incomplete JTM ledger")
+    result = {}
+    for output, field in (("balance", "available"), ("pending", "immature"), ("reserved", "reserved"), ("paid_total", "paid")):
+        raw = balance[field]
+        if not re.fullmatch(r"\d+", str(raw)):
+            raise ValueError("Invalid micro-JTM value")
+        result[output] = amount(raw, 1_000_000)
+    result["_updated_at"] = upstream_time(data)
+    return result
+
+
+def address_parser(parser, address):
+    def parse(data):
+        if data.get("address") != address:
+            raise ValueError("Wrong JTM address")
+        return parser(data)
+    return parse
+
+
 def source_specs(config):
     prl, nock = config["prl_address"], config["nock_address"]
-    return {
+    specs = {
         "prl_pool": (f"https://pearlhash.xyz/api/account/{prl}", parse_prl_pool),
         "nock_pool": (f"https://pearlhash.xyz/api/nock-balance/{prl}", parse_nock_pool),
         "prl_chain": (f"https://api.prlscan.com/v1/addresses/{prl}", parse_prl_chain),
@@ -198,12 +261,22 @@ def source_specs(config):
         "nock_chain": (f"https://nockscan.com/api/v1/address/{nock}?limit=50", parse_nock_chain),
         "prices": (PRICE_URL, parse_prices),
     }
+    if config.get("jtm_address"):
+        address = config["jtm_address"]
+        for key, path, parser in (("jtm_mining", "mining", parse_jtm_mining), ("jtm_balance", "wallet", parse_jtm_balance)):
+            specs[key] = (f"https://pool.gozero.trade/portal-api/jtm/{path}?address={address}", address_parser(parser, address))
+    return specs
 
 
 def collect_source(key, url, parser, previous=None):
     checked = utcnow()
     try:
         data = parser(request_json(url, allow_empty_address=(key == "nock_chain")))
+        if key.startswith("jtm_"):
+            updated = data.pop("_updated_at")
+            stale = time.time() - datetime.fromisoformat(updated.replace("Z", "+00:00")).timestamp() > 900
+            return {"state": "stale" if stale else "ok", "data": data, "updated_at": updated,
+                    "checked_at": checked, "error": "Pool data is over 15 minutes old" if stale else None}
         if key == "prices":
             updated = min(q["updated_at"] for q in data["quotes"].values() if q)
             stale = time.time() - datetime.fromisoformat(updated.replace("Z", "+00:00")).timestamp() > 900
